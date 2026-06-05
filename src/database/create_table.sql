@@ -20,7 +20,8 @@ CREATE TABLE dim_geography (
     geo_id INT PRIMARY KEY,
     latitude FLOAT,
     longitude FLOAT,
-    location_name VARCHAR(255)
+    location_name VARCHAR(255),
+    capacity INT
 );
 
 -- 3. Bảng Dim_Date
@@ -29,7 +30,10 @@ CREATE TABLE dim_date (
     full_date DATE,
     day INT,
     month INT,
-    year INT
+    year INT,
+    is_holiday INT,
+    is_semester INT,
+    is_exam INT
 );
 
 -- 4. Bảng Dim_Time

@@ -1,10 +1,28 @@
-./README_backup.md
-/data/
+README_backup.md
+docs/.gitkeep
+docs/configurations_and_setups/getting-started.md
+docs/configurations_and_setups/index.md
+src/models/
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
 create_branches.sh
-docs/crawl_data_v2.tex
-docs/docs/data_collection.md
-docs/github_setup.tex
-docs/gdrive_structure.tex
+pgadmin/
+git_workflow.md
+
+# docs - tex reports (ignored, not pushed to git)
+docs/scrum_5_pipeline_foundation/2026_06_03_refactor_log_TanDat.md
+docs/scrum_5_pipeline_foundation/2026_05_23_github_setup_report_TanDat.tex
+docs/scrum_5_pipeline_foundation/2026_05_23_gdrive_structure_report_TanDat.tex
+docs/scrum_5_pipeline_foundation/2026_05_23_git_workflow_report_TanDat.tex
+docs/scrum_5_pipeline_foundation/2026_06_03_refactor_folder_import_TanDat.tex
+docs/scrum_6_business_logic_eda/schema.md
+docs/scrum_6_business_logic_eda/schema.mmd
+docs/scrum_6_business_logic_eda/2026_05_20_crawl_data_report_TanDat.tex
+docs/scrum_6_business_logic_eda/2026_05_25_schema_design_report_TanDat.tex
+docs/scrum_6_business_logic_eda/2026_05_27_db_connection_report_TanDat.tex
+docs/scrum_6_business_logic_eda/2026_05_27_create_table_report_TanDat.tex
 
 # Mac OS-specific storage files
 .DS_Store

@@ -4,7 +4,7 @@ from loguru import logger
 from tqdm import tqdm
 import typer
 
-from du_an_tot_nghiep.config import PROCESSED_DATA_DIR
+from src.config import FIGURES_DIR, PROCESSED_DATA_DIR
 
 app = typer.Typer()
 
@@ -13,15 +13,15 @@ app = typer.Typer()
 def main(
     # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
     input_path: Path = PROCESSED_DATA_DIR / "dataset.csv",
-    output_path: Path = PROCESSED_DATA_DIR / "features.csv",
+    output_path: Path = FIGURES_DIR / "plot.png",
     # -----------------------------------------
 ):
     # ---- REPLACE THIS WITH YOUR OWN CODE ----
-    logger.info("Generating features from dataset...")
+    logger.info("Generating plot from data...")
     for i in tqdm(range(10), total=10):
         if i == 5:
             logger.info("Something happened for iteration 5.")
-    logger.success("Features generation complete.")
+    logger.success("Plot generation complete.")
     # -----------------------------------------
 
 

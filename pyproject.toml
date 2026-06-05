@@ -3,7 +3,7 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "du_an_tot_nghiep"
+name = "graduation_project"
 version = "0.0.1"
 description = "A short description of the project."
 authors = [

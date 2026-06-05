@@ -122,7 +122,7 @@
 % Line spacing
 \usepackage{setspace}
 \onehalfspacing
-\setlength{\headheight}{15.5pt}
+\setlength{\headheight}{33pt}
 
 % ======================== CẤU HÌNH CODE PYTHON ==============================
 \definecolor{codegreen}{rgb}{0,0.6,0}
@@ -185,7 +185,7 @@
 \fancypagestyle{front}{
     \fancyhf{}
     \fancyfoot[L]{\small Dự án Tốt nghiệp}
-    \fancyfoot[R]{\small Page \thepage}
+    \fancyfoot[R]{\small Page \thepage\ of \pageref{LastPage}}
     \renewcommand{\headrulewidth}{0pt}
     \renewcommand{\footrulewidth}{0.4pt}
 }
@@ -246,12 +246,12 @@
         \hspace{2cm} \textbf{Giảng viên hướng dẫn:} Văn Công Khanh
     \end{flushleft}
     \vfill
-    {\normalsize \textbf{TP. HỒ CHÍ MINH, THÁNG 5 NĂM 2026}}
-    \vspace{0.2cm} % Tạo một khoảng đệm nhỏ an toàn với đường viền dưới
+    {\normalsize \textbf{TP. HỒ CHÍ MINH, THÁNG 6 NĂM 2026}}
+    \vspace{0.5cm} % Tạo một khoảng đệm nhỏ an toàn với đường viền dưới
 \end{center}
 \end{titlepage}
 
-\pagenumbering{roman}
+\pagenumbering{arabic}
 \pagestyle{front}
 
 % ────────────────────────────────────────────────────────────────────
@@ -278,9 +278,9 @@
 \chapter*{Tóm tắt Dự án}
 \addcontentsline{toc}{chapter}{Tóm tắt Dự án}
 Dự án tốt nghiệp ``Phân tích và Xử lý Bất thường trong Dữ liệu Sản lượng Năng lượng Mặt trời'' nhằm mục đích xây dựng một hệ thống phân tích dữ liệu toàn diện để phát hiện, xử lý và dự báo các bất thường trong sản lượng phát điện của các hệ thống quang điện (PV). 
-Bằng cách thu thập và tích hợp dữ liệu từ 42 trạm phát điện tại Úc cùng dữ liệu khí tượng viễn thám từ NASA POWER và Open-Meteo, nhóm đã thiết kế một kho dữ liệu đa chiều (Data Warehouse) trên nền tảng Supabase theo mô hình Galaxy Schema. Quy trình ETL được tự động hóa để làm sạch dữ liệu, xử lý các hiện tượng khuyết thiếu, nhiễu ban đêm, và sai lệch do cảm biến. 
+Bằng cách thu thập và tích hợp dữ liệu từ 42 trạm phát điện tại Úc cùng dữ liệu khí tượng viễn thám từ Open-Meteo, nhóm đã thiết kế một kho dữ liệu đa chiều (Data Warehouse) trên nền tảng Supabase theo mô hình Galaxy Schema. Quy trình ETL được tự động hóa để làm sạch dữ liệu, xử lý các hiện tượng khuyết thiếu, nhiễu ban đêm, và sai lệch do cảm biến. 
 
-Qua quá trình Phân tích Khám phá Dữ liệu (EDA), nhóm đã rút ra các insight quan trọng về sự ảnh hưởng của nhiệt độ, mức độ mây che phủ đến hiệu suất PV. Ngoài ra, dự án cũng áp dụng các mô hình học máy chuỗi thời gian như ARIMA và Prophet để thiết lập đường cơ sở (Baseline) dự báo sản lượng, kết hợp hiển thị trực quan thông qua Dashboard Power BI. Hệ thống không chỉ cung cấp cái nhìn toàn cảnh về tình trạng hoạt động của các trạm điện mặt trời, mà còn hỗ trợ ban quản lý đưa ra quyết định kịp thời nhằm tối ưu hóa hiệu suất và giảm thiểu rủi ro vận hành.
+Qua quá trình Phân tích Khám phá Dữ liệu (EDA), nhóm đã rút ra các insight quan trọng về sự ảnh hưởng của nhiệt độ, mức độ mây che phủ đến hiệu suất PV. Ngoài ra, dự án cũng áp dụng các mô hình học máy chuỗi thời gian như ARIMA và Prophet để thiết lập đường cơ sở (Baseline) dự báo sản lượng, kết hợp hiển thị trực quan thông qua Dashboard Tableau. Hệ thống không chỉ cung cấp cái nhìn toàn cảnh về tình trạng hoạt động của các trạm điện mặt trời, mà còn hỗ trợ ban quản lý đưa ra quyết định kịp thời nhằm tối ưu hóa hiệu suất và giảm thiểu rủi ro vận hành.
 
 % ────────────────────────────────────────────────────────────────────
 %  MỤC LỤC & DANH MỤC
@@ -291,28 +291,39 @@ Qua quá trình Phân tích Khám phá Dữ liệu (EDA), nhóm đã rút ra cá
 
 \chapter*{Danh mục Từ viết tắt}
 \addcontentsline{toc}{chapter}{Danh mục Từ viết tắt}
-\vspace*{-15pt} % Giữ khoảng cách dọc khít với tiêu đề
+\vspace*{-15pt}
 
-% Dịch toàn bộ khối bảng sang trái một khoảng vừa vặn để khớp với lề tiêu đề
-\noindent\hspace*{-6pt}%0
+\noindent\hspace*{-6pt}%
     \begin{tabularx}{\textwidth}{@{} l X @{}}
     \toprule
     \textbf{Ký hiệu/Từ viết tắt} & \textbf{Ý nghĩa đầy đủ} \\
     \midrule
-    CSDL    & Cơ sở dữ liệu \\
-    DWH     & Data Warehouse (Kho dữ liệu) \\
-    ETL     & Extract, Transform, Load (Trích xuất, Biến đổi, Nạp) \\
-    EDA     & Exploratory Data Analysis (Phân tích khám phá dữ liệu) \\
-    ARIMA   & AutoRegressive Integrated Moving Average \\
-    IQR     & Interquartile Range \\
-    kWp     & Kilowatt-peak (Công suất đỉnh cực đại) \\
-    PV      & Photovoltaic (Quang điện - Năng lượng mặt trời) \\
     API     & Application Programming Interface (Giao diện lập trình ứng dụng) \\
+    ARIMA   & AutoRegressive Integrated Moving Average \\
+    AWS     & Amazon Web Services \\
+    BI      & Business Intelligence (Phân tích thông minh doanh nghiệp) \\
+    CF      & Capacity Factor (Hệ số công suất) \\
+    CSDL    & Cơ sở dữ liệu \\
+    CT      & Current Transformer (Cảm biến dòng điện) \\
+    DWH     & Data Warehouse (Kho dữ liệu) \\
+    EDA     & Exploratory Data Analysis (Phân tích khám phá dữ liệu) \\
+    ETL     & Extract, Transform, Load (Trích xuất, Biến đổi, Nạp) \\
+    FK      & Foreign Key (Khóa ngoại) \\
+    GCP     & Google Cloud Platform \\
+    IoT     & Internet of Things (Internet vạn vật) \\
+    IQR     & Interquartile Range (Khoảng tứ phân vị) \\
+    kWp     & Kilowatt-peak (Công suất đỉnh cực đại) \\
+    LSTM    & Long Short-Term Memory \\
+    PK      & Primary Key (Khóa chính) \\
+    PR      & Performance Ratio (Hệ số hiệu suất) \\
+    PV      & Photovoltaic (Quang điện - Năng lượng mặt trời) \\
+    UI/UX   & User Interface / User Experience (Giao diện / Trải nghiệm người dùng) \\
+    WMO     & World Meteorological Organization (Tổ chức Khí tượng Thế giới) \\
+    XGBoost & Extreme Gradient Boosting \\
     \bottomrule
     \end{tabularx}
 
 \newpage
-\pagenumbering{arabic}
 \pagestyle{main}
 
 % ====================================================================
@@ -548,6 +559,111 @@ if all_data_frames:
 \end{itemize}
 Bộ dữ liệu thô được lưu trữ thành các tệp tin CSV: \texttt{campus\_meta.csv}, \texttt{Solar\_Site\_Details.csv},\\ \texttt{calender.csv}, \texttt{Solar\_Energy\_Generation.csv}, và \texttt{open\_meteo\_weather\_raw\_2023.csv}.
 
+% ====================================================================
+% MỤC MỚI BỔ SUNG: TỪ ĐIỂN DỮ LIỆU & META DATA
+% ====================================================================
+\section{Data Dictionary \& Metadata}
+\label{sec:data_dictionary}
+
+Sau quá trình trích xuất và thu thập, bộ dữ liệu thô được cô đọng lại thành 5 tệp tin cốt lõi (Core Datasets). Việc xây dựng từ điển dữ liệu (Data Dictionary) ở giai đoạn này giúp định nghĩa rõ ràng cấu trúc, kiểu dữ liệu và ý nghĩa của từng trường thông tin gốc trước khi thực hiện các bước biến đổi (Transform) và đưa vào Kho dữ liệu.
+
+\subsection{Dữ liệu Thông tin Cơ sở hạ tầng (\texttt{campus\_meta.csv})}
+Tệp lưu trữ thông tin định danh cấp cao nhất về các khu vực/cơ sở dự án. Quy mô: 5 dòng.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu tệp \texttt{campus\_meta.csv}}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{p{3.5cm} c p{2cm} X}
+\toprule
+\textbf{Tên trường} & \textbf{Kiểu DL} & \textbf{Đơn vị} & \textbf{Ý nghĩa \& Mô tả kỹ thuật} \\
+\midrule
+id       & Integer & -  & Mã định danh duy nhất (Primary Key) cho từng cơ sở. \\
+name     & VARCHAR  & -  & Tên gọi chính thức của cơ sở (VD: Bundoora, Bendigo...). \\
+capacity & Integer & kW & Sức chứa, quy mô hoạt động hoặc mức công suất thiết kế. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\newpage
+\subsection{Dữ liệu Thông tin Kỹ thuật Trạm (\texttt{Solar\_Site\_Details.csv})}
+Tệp lưu trữ chi tiết cấu hình kỹ thuật, thiết bị lắp đặt và tọa độ địa lý của các trạm phát điện. Quy mô: 42 dòng.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu tệp \texttt{Solar\_Site\_Details.csv}}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{p{3.5cm} c p{2cm} X}
+\toprule
+\textbf{Tên trường} & \textbf{Kiểu DL} & \textbf{Đơn vị} & \textbf{Ý nghĩa \& Mô tả kỹ thuật} \\
+\midrule
+CampusKey        & Integer & -   & Mã định danh cơ sở nơi đặt trạm điện. \\
+SiteKey          & Integer & -   & Mã định danh duy nhất của từng trạm phát điện. \\
+kWp              & Float   & kWp & Công suất đỉnh tối đa của hệ thống. \\
+Number of panels & Float   & Tấm & Tổng số lượng tấm pin mặt trời được lắp đặt. \\
+Panel            & String  & -   & Thương hiệu và công suất định mức của tấm pin. \\
+Inverter         & String  & -   & Thông tin bộ biến đổi dòng điện (Inverter). \\
+Optimizers       & String  & -   & Thông tin bộ tối ưu hóa công suất đi kèm. \\
+Metric           & String  & -   & Đơn vị đo lường sản lượng điện năng. \\
+lat              & Float   & Độ ($^\circ$) & Vĩ độ địa lý (Latitude). \\
+Lon              & Float   & Độ ($^\circ$) & Kinh độ địa lý (Longitude). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Dữ liệu Sản lượng Điện (\texttt{Solar\_Energy\_Generation.csv})}
+Bảng dữ liệu chuỗi thời gian (Fact Table) chứa sản lượng phát điện thực tế được ghi nhận liên tục theo chu kỳ 15 phút. Quy mô: 2.731.947 dòng.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu tệp \texttt{Solar\_Energy\_Generation.csv}}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{p{3.5cm} c p{2cm} X}
+\toprule
+\textbf{Tên trường} & \textbf{Kiểu DL} & \textbf{Đơn vị} & \textbf{Ý nghĩa \& Mô tả kỹ thuật} \\
+\midrule
+CampusKey       & Integer  & -   & Mã định danh cơ sở liên kết. \\
+SiteKey         & Integer  & -   & Mã định danh trạm phát điện mặt trời cụ thể. \\
+Timestamp       & DateTime & -   & Mốc thời gian đo đạc dữ liệu sản lượng (Chu kỳ 15 phút). \\
+SolarGeneration & Float    & kWh & Sản lượng điện năng thực tế tạo ra trong khoảng 15 phút đó. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Dữ liệu Thông tin Lịch trình (\texttt{calender.csv})}
+Bảng dữ liệu đánh dấu các sự kiện thời gian theo cấp độ ngày, giúp phân tích các yếu tố hành vi ảnh hưởng đến nhu cầu tiêu thụ và vận hành. Quy mô: 2.313 dòng.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu tệp \texttt{calender.csv}}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{p{3.5cm} c p{2cm} X}
+\toprule
+\textbf{Tên trường} & \textbf{Kiểu DL} & \textbf{Đơn vị} & \textbf{Ý nghĩa \& Mô tả kỹ thuật} \\
+\midrule
+date         & Date    & - & Mốc thời gian theo ngày (định dạng DD/MM/YYYY). \\
+is\_holiday  & Boolean & - & Cờ đánh dấu ngày nghỉ lễ (1: Lễ, 0: Bình thường). \\
+is\_semester & Boolean & - & Cờ đánh dấu ngày nằm trong giai đoạn học kỳ chính thức. \\
+is\_exam     & Boolean & - & Cờ đánh dấu ngày diễn ra kỳ thi tại cơ sở. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Dữ liệu Khí tượng Viễn thám (\texttt{open\_meteo\_weather\_raw.csv})}
+Chuỗi thời gian chứa các chỉ số khí tượng được trích xuất qua API tương ứng với tọa độ từng trạm phát. Quy mô: 367.920 dòng.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu tệp \texttt{open\_meteo\_weather\_raw.csv}}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{p{3.8cm} c p{2cm} X}
+\toprule
+\textbf{Tên trường} & \textbf{Kiểu DL} & \textbf{Đơn vị} & \textbf{Ý nghĩa \& Mô tả kỹ thuật} \\
+\midrule
+shortwave\_radiation & Float   & W/m$^2$ & Tổng bức xạ sóng ngắn bề mặt. Feature có tương quan cao nhất với sản lượng điện. \\
+direct\_radiation    & Float   & W/m$^2$ & Bức xạ mặt trời chiếu trực tiếp tới bề mặt. \\
+diffuse\_radiation   & Float   & W/m$^2$ & Bức xạ mặt trời bị khuếch tán (do mây, bụi, sương mù). \\
+temperature\_2m      & Float   & $^\circ$C & Nhiệt độ không khí ở độ cao 2 mét. Phục vụ đánh giá suy giảm nhiệt. \\
+weather\_code        & Integer & -       & Mã thời tiết theo chuẩn WMO (0: Quang đãng, 51-67: Mưa...). Phân loại Categorical tốt cho ML. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+% ====================================================================
 \section{Thiết kế kiến trúc Kho dữ liệu đa chiều (Data Warehouse)}
 \label{sec:star_schema}
 
@@ -596,7 +712,7 @@ Mô hình logic cụ thể hóa các thực thể thành các bảng và xác đ
 \end{figure}
 
 \subsection{Mô hình Dữ liệu Vật lý (Physical Data Model)}
-Mô hình vật lý định nghĩa cách thức dữ liệu được lưu trữ thực tế trên hệ quản trị cơ sở dữ liệu (sơ đồ ở Hình \ref{fig:physical_model}). Ở bước này, các kiểu dữ liệu (Data Types) cụ thể (INT, FLOAT, VARCHAR, DATE) và ràng buộc khóa ngoại (Foreign Keys) được thiết lập để tối ưu hóa không gian lưu trữ và tốc độ truy vấn. Chi tiết cấu trúc vật lý của các bảng chiều được mô tả trong Bảng \ref{tab:dim_tables_spec}. Các bảng sự kiện sản lượng và thời tiết được mô tả tương ứng trong Bảng \ref{tab:fact_gen_spec} và Bảng \ref{tab:fact_weather_spec}.
+Mô hình vật lý định nghĩa cách thức dữ liệu được lưu trữ thực tế trên hệ quản trị cơ sở dữ liệu (sơ đồ ở Hình \ref{fig:physical_model}). Ở bước này, các kiểu dữ liệu (Data Types) cụ thể (INT, FLOAT, VARCHAR, DATE) và ràng buộc khóa ngoại (Foreign Keys) được thiết lập để tối ưu hóa không gian lưu trữ và tốc độ truy vấn. Chi tiết cấu trúc vật lý của các bảng chiều được mô tả từ Bảng \ref{tab:dim_solar_site} đến Bảng \ref{tab:dim_weather_type}. Các bảng sự kiện sản lượng và thời tiết được mô tả tương ứng trong Bảng \ref{tab:fact_gen_spec} và Bảng \ref{tab:fact_weather_spec}.
 
 \begin{figure}[H]
     \centering
@@ -605,68 +721,167 @@ Mô hình vật lý định nghĩa cách thức dữ liệu được lưu trữ 
     \label{fig:physical_model}
 \end{figure}
 
+% =====================================================================
+% BẢNG 1: DIM SOLAR SITE
+% =====================================================================
 \begin{table}[H]
 \centering
-\caption{Cấu trúc vật lý của các bảng chiều (Dimension Tables)}
-\label{tab:dim_tables_spec}
-\begin{tabularx}{\textwidth}{p{3.5cm} p{3.2cm} c X}
+\caption{Cấu trúc vật lý bảng chiều trạm năng lượng (\texttt{dim\_solar\_site})}
+\label{tab:dim_solar_site}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{p{4.5cm} c X}
 \toprule
-\textbf{Tên bảng} & \textbf{Tên trường} & \textbf{Kiểu DL} & \textbf{Diễn giải vật lý} \\
+\textbf{Tên trường (Field)} & \textbf{Kiểu DL} & \textbf{Diễn giải vật lý} \\
 \midrule
-\multirow{4}{*}{\texttt{dim\_solar\_site}} 
-& site\_id & INT (PK) & Khóa chính của trạm. \\
-& campus\_name & VARCHAR & Tên khu vực đặt trạm. \\
-& capacity\_kw & FLOAT & Công suất thiết kế (kW). \\
-& Inverter & VARCHAR & Thông tin bộ biến đổi điện. \\
-\midrule
-\multirow{3}{*}{\texttt{dim\_geography}} 
-& geo\_id & INT (PK) & Khóa chính định danh địa lý. \\
-& latitude & FLOAT & Vĩ độ (số thực). \\
-& longitude & FLOAT & Kinh độ (số thực). \\
-\midrule
-\multirow{3}{*}{\texttt{dim\_date}} 
-& date\_id & INT (PK) & Khóa chính đại diện ngày. \\
-& full\_date & DATE & Định dạng thời gian (YYYY-MM-DD). \\
-& day / month / year & INT & Ngày, tháng, năm phân tích. \\
+site\_id           & INT (PK) & Khóa chính của trạm. \\
+campus\_name       & VARCHAR  & Tên khu vực đặt trạm dưới dạng chuỗi ký tự. \\
+capacity\_kw       & FLOAT    & Công suất thiết kế (số thực). \\
+Number\_of\_panels & INT      & Tổng số lượng tấm pin (số nguyên). \\
+Panel              & VARCHAR  & Thương hiệu/loại tấm pin (chuỗi ký tự). \\
+Inverter           & VARCHAR  & Thông tin bộ biến đổi điện (chuỗi ký tự). \\
+Optimizers         & VARCHAR  & Bộ tối ưu hóa (chuỗi ký tự). \\
+Metric             & VARCHAR  & Ghi chú/tiêu chuẩn đo lường (chuỗi ký tự). \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
+% =====================================================================
+% BẢNG 2: DIM GEOGRAPHY
+% =====================================================================
+\begin{table}[H]
+\centering
+\caption{Cấu trúc vật lý bảng chiều địa lý (\texttt{dim\_geography})}
+\label{tab:dim_geography}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{p{4.5cm} c X}
+\toprule
+\textbf{Tên trường (Field)} & \textbf{Kiểu DL} & \textbf{Diễn giải vật lý} \\
+\midrule
+geo\_id        & INT (PK) & Khóa chính định danh vị trí địa lý. \\
+latitude      & FLOAT    & Vĩ độ (số thực). \\
+longitude     & FLOAT    & Kinh độ (số thực). \\
+location\_name & VARCHAR  & Tên địa danh hành chính. \\
+capacity      & INT      & Tổng công suất của khu vực đặt trạm (kW). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =====================================================================
+% BẢNG 3: DIM DATE
+% =====================================================================
+\begin{table}[H]
+\centering
+\caption{Cấu trúc vật lý bảng chiều ngày (\texttt{dim\_date})}
+\label{tab:dim_date}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{p{4.5cm} c X}
+\toprule
+\textbf{Tên trường (Field)} & \textbf{Kiểu DL} & \textbf{Diễn giải vật lý} \\
+\midrule
+date\_id       & INT (PK) & Khóa chính đại diện ngày. \\
+full\_date     & DATE     & Trường lưu định dạng thời gian nguyên bản (YYYY-MM-DD). \\
+day            & INT      & Ngày trong tháng (số nguyên). \\
+month          & INT      & Tháng trong năm (số nguyên). \\
+year           & INT      & Năm phân tích (số nguyên). \\
+is\_holiday    & INT      & Đánh dấu ngày lễ (1: Ngày lễ, 0: Ngày thường). \\
+is\_semester   & INT      & Đánh dấu học kỳ (1: Trong kỳ học, 0: Kỳ nghỉ). \\
+is\_exam       & INT      & Đánh dấu mùa thi (1: Trong mùa thi, 0: Bình thường). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =====================================================================
+% BẢNG 4: DIM TIME
+% =====================================================================
+\begin{table}[H]
+\centering
+\caption{Cấu trúc vật lý bảng chiều thời gian (\texttt{dim\_time})}
+\label{tab:dim_time}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{p{4.5cm} c X}
+\toprule
+\textbf{Tên trường (Field)} & \textbf{Kiểu DL} & \textbf{Diễn giải vật lý} \\
+\midrule
+time\_id     & INT (PK) & Khóa chính mốc thời gian. \\
+time\_string & VARCHAR  & Chuỗi ký tự biểu diễn giờ (HH:MM). \\
+hour         & INT      & Giờ trong ngày (số nguyên). \\
+minute       & INT      & Phút (số nguyên). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =====================================================================
+% BẢNG 5: DIM WEATHER TYPE
+% =====================================================================
+\begin{table}[H]
+\centering
+\caption{Cấu trúc vật lý bảng chiều danh mục thời tiết (\texttt{dim\_weather\_type})}
+\label{tab:dim_weather_type}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{p{4.5cm} c X}
+\toprule
+\textbf{Tên trường (Field)} & \textbf{Kiểu DL} & \textbf{Diễn giải vật lý} \\
+\midrule
+weather\_type\_id    & INT (PK) & Khóa chính danh mục thời tiết. \\
+weather\_code       & INT      & Mã trạng thái WMO (số nguyên). \\
+is\_day             & INT      & Trạng thái ánh sáng (1: Ngày, 0: Đêm) lưu dạng số nguyên. \\
+weather\_condition  & VARCHAR  & Tên điều kiện thời tiết tổng quát. \\
+description         & VARCHAR  & Chuỗi văn bản mô tả chi tiết diễn biến thời tiết. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =====================================================================
+% BẢNG 6: FACT SOLAR ENERGY GEN
+% =====================================================================
 \begin{table}[H]
 \centering
 \caption{Cấu trúc vật lý bảng sự kiện sản lượng (\texttt{fact\_solar\_energy\_gen})}
 \label{tab:fact_gen_spec}
-\begin{tabularx}{\textwidth}{p{4.5cm} p{2cm} p{2cm} X}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{p{4.5cm} c X}
 \toprule
-\textbf{Tên trường} & \textbf{Kiểu DL} & \textbf{Loại khóa} & \textbf{Diễn giải ý nghĩa} \\
+\textbf{Tên trường (Field)} & \textbf{Kiểu DL} & \textbf{Diễn giải mục đích vật lý} \\
 \midrule
-gen\_id & INT & PK & Định danh dòng sự kiện (Auto-increment). \\
-site\_id & INT & FK & Tham chiếu \texttt{dim\_solar\_site}. \\
-geo\_id & INT & FK & Tham chiếu \texttt{dim\_geography}. \\
-date\_id & INT & FK & Tham chiếu \texttt{dim\_date}. \\
-time\_id & INT & FK & Tham chiếu \texttt{dim\_time}. \\
-energy\_generated\_kwh & FLOAT & Measure & Sản lượng điện năng sinh ra. \\
+gen\_id & INT & Khóa chính định danh từng dòng sự kiện (Auto-increment). \\
+site\_id & INT & Khóa ngoại trỏ đến \texttt{dim\_solar\_site.site\_id}. \\
+geo\_id & INT & Khóa ngoại trỏ đến \texttt{dim\_geography.geo\_id}. \\
+date\_id & INT & Khóa ngoại trỏ đến \texttt{dim\_date.date\_id}. \\
+time\_id & INT & Khóa ngoại trỏ đến \texttt{dim\_time.time\_id}. \\
+energy\_generated\_kwh & FLOAT & Sản lượng điện năng sinh ra (kiểu số thực để tính toán độ chính xác cao). \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
+% =====================================================================
+% BẢNG 7: FACT WEATHER
+% =====================================================================
 \begin{table}[H]
 \centering
 \caption{Cấu trúc vật lý bảng sự kiện thời tiết (\texttt{fact\_weather})}
 \label{tab:fact_weather_spec}
-\begin{tabularx}{\textwidth}{p{4.5cm} p{2cm} p{2cm} X}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{p{5cm} c X}
 \toprule
-\textbf{Tên trường} & \textbf{Kiểu DL} & \textbf{Loại khóa} & \textbf{Diễn giải ý nghĩa} \\
+\textbf{Tên trường (Field)} & \textbf{Kiểu DL} & \textbf{Diễn giải mục đích vật lý} \\
 \midrule
-weather\_id & INT & PK & Mã định danh lịch sử thời tiết. \\
-geo\_id & INT & FK & Tham chiếu \texttt{dim\_geography}. \\
-date\_id & INT & FK & Tham chiếu \texttt{dim\_date}. \\
-time\_id & INT & FK & Tham chiếu \texttt{dim\_time}. \\
-weather\_type\_id & INT & FK & Tham chiếu \texttt{dim\_weather\_type}. \\
-is\_day & INT & Attribute & Trạng thái ánh sáng (1: Ngày, 0: Đêm). \\
-shortwave\_radiation & INT & Measure & Bức xạ sóng ngắn. \\
-temperature\_c & FLOAT & Measure & Nhiệt độ không khí. \\
-cloud\_cover\_total & FLOAT & Measure & Tổng độ che phủ mây (\%). \\
+weather\_id & INT & Khóa chính định danh dòng lịch sử thời tiết. \\
+geo\_id & INT & Khóa ngoại trỏ đến \texttt{dim\_geography.geo\_id}. \\
+date\_id & INT & Khóa ngoại trỏ đến \texttt{dim\_date.date\_id}. \\
+time\_id & INT & Khóa ngoại trỏ đến \texttt{dim\_time.time\_id}. \\
+weather\_type\_id & INT & Khóa ngoại trỏ đến \texttt{dim\_weather\_type.weather\_type\_id}. \\
+is\_day & INT & Chỉ số phân tách chu kỳ ánh sáng (số nguyên: 1/0). \\
+shortwave\_radiation & INT & Bức xạ sóng ngắn (số nguyên). \\
+temperature\_c & FLOAT & Nhiệt độ không khí (số thực). \\
+cloud\_cover\_total & FLOAT & Tổng độ che phủ mây (số thực, tỷ lệ \%). \\
+cloud\_cover\_low & FLOAT & Tỷ lệ mây tầng thấp (số thực). \\
+cloud\_cover\_mid & FLOAT & Tỷ lệ mây tầng trung (số thực). \\
+cloud\_cover\_high & FLOAT & Tỷ lệ mây tầng cao (số thực). \\
+Diffuse\_Solar\_Radiation & INT & Ánh sáng tán xạ (số nguyên). \\
+Direct\_Normal\_Irradiance & INT & Bức xạ chiếu thẳng (số nguyên). \\
+wind\_speed & FLOAT & Tốc độ gió (số thực). \\
+precipitation\_mm & FLOAT & Tổng lượng mưa tích tụ (số thực). \\
+Sunshine\_Duration & FLOAT & Thời lượng nắng (số thực). \\
 \bottomrule
 \end{tabularx}
 \end{table}
