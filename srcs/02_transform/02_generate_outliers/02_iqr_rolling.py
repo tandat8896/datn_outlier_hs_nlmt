@@ -12,7 +12,7 @@ pd.set_option('display.width', 180)
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG = ROOT / "config" / "02_transform" / "01_generate_outliers.yaml"
 
-with DEFAULT_CONFIG.open() as _f:
+with DEFAULT_CONFIG.open(encoding="utf-8") as _f:
     _cfg = yaml.safe_load(_f)
 
 SOLAR_PATH = ROOT / _cfg["paths"]["parquet_dir"] / "temp_fact_solar_energy_gen.parquet"

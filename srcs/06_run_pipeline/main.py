@@ -49,7 +49,7 @@ PIPELINE_CONFIG = (
 
 
 def _load_outlier_paths():
-    with OUTLIER_CONFIG.open() as f:
+    with OUTLIER_CONFIG.open(encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
     return (
         PROJECT_ROOT / cfg["paths"]["full_outlier_csv"],
@@ -58,7 +58,7 @@ def _load_outlier_paths():
 
 
 def _load_sleep_seconds() -> int:
-    with PIPELINE_CONFIG.open() as f:
+    with PIPELINE_CONFIG.open(encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
     return int(cfg["pipeline"]["sleep_between_stages_seconds"])
 

@@ -33,7 +33,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_FILE = ROOT / "config" / "02_transform" / "01_generate_outliers.yaml"
 
-with CONFIG_FILE.open() as _file:
+with CONFIG_FILE.open(encoding="utf-8") as _file:
     _config = yaml.safe_load(_file)
 
 DEFAULT_FULL_CSV = (
@@ -161,7 +161,7 @@ def fingerprint_csv_md5_compatible(path: Path) -> dict[str, object]:
     def md5_60(text: str) -> int:
         return int(hashlib.md5(text.encode("utf-8")).hexdigest()[:15], 16)
 
-    with path.open("r", newline="") as f:
+    with path.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         columns = reader.fieldnames or []
         missing = [col for col in REQUIRED_COLUMNS if col not in columns]
@@ -413,7 +413,7 @@ def audit_csv(path: Path) -> CsvAudit:
 
     rows = 0
     flagged_rows = 0
-    with path.open("r", newline="") as f:
+    with path.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         columns = reader.fieldnames or []
         missing = [col for col in REQUIRED_COLUMNS if col not in columns]
@@ -431,7 +431,7 @@ def audit_csv(path: Path) -> CsvAudit:
 
 def read_csv_batches(path: Path, batch_size: int) -> Iterable[list[tuple]]:
     batch: list[tuple] = []
-    with path.open("r", newline="") as f:
+    with path.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
             energy = row["energy_generated_kwh"].strip()

@@ -27,7 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 ENV_FILE = REPO_ROOT / ".env.local"
 DEFAULT_CONFIG = REPO_ROOT / "config" / "02_transform" / "01_generate_outliers.yaml"
 
-with DEFAULT_CONFIG.open() as _file:
+with DEFAULT_CONFIG.open(encoding="utf-8") as _file:
     _config = yaml.safe_load(_file)
 
 SCHEMA = _config["database"]["schema"]
@@ -207,7 +207,7 @@ def run(args: argparse.Namespace) -> int:
         output_dir = Path(args.output_dir).resolve()
     else:
         config_path = Path(args.config).resolve() if args.config else DEFAULT_CONFIG
-        with config_path.open() as f:
+        with config_path.open(encoding="utf-8") as f:
             cfg = yaml.safe_load(f)
         output_dir = (REPO_ROOT / cfg["paths"]["parquet_dir"]).resolve()
 

@@ -13,7 +13,7 @@ CONFIG_FILE = (
     / "02_ml_mart.yaml"
 )
 
-with CONFIG_FILE.open() as _file:
+with CONFIG_FILE.open(encoding="utf-8") as _file:
     _config = yaml.safe_load(_file)
 
 SOURCE_SCHEMA = _config["database"]["source_schema"]

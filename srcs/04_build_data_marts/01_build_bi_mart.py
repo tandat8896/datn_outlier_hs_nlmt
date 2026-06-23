@@ -8,7 +8,7 @@ log = logging.getLogger("pipeline.bi_mart")
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _BI_PARAMS_CONFIG = _REPO_ROOT / "config" / "04_machine_learning" / "01_bi_mart_params.yaml"
 
-with _BI_PARAMS_CONFIG.open() as _f:
+with _BI_PARAMS_CONFIG.open(encoding="utf-8") as _f:
     _bi_cfg = yaml.safe_load(_f)
 
 # Business params từ config
