@@ -10,9 +10,9 @@ import psycopg2
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 
-# Tự động load biến môi trường từ .env.local ở thư mục gốc
+# Tự động load biến môi trường từ .env ở thư mục gốc
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-ENV_FILE = PROJECT_ROOT / ".env.local"
+ENV_FILE = PROJECT_ROOT / ".env"
 load_dotenv(ENV_FILE, override=True)
 
 

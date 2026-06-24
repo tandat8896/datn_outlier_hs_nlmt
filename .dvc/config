@@ -1,5 +1,6 @@
 [core]
-    remote = supabase
-['remote "supabase"']
-    url = s3://mlmart
+    remote = mlmart_base
+['remote "mlmart_base"']
+    url = s3://mlmart/mlmart_base
     endpointurl = https://gocnjdtutobgalyqomwz.storage.supabase.co/storage/v1/s3
+    region = ap-southeast-1
