@@ -1,0 +1,5 @@
+outs:
+- md5: 258592415d0d52fa1abe134deadcf6db
+  size: 73163684
+  hash: md5
+  path: ml_mart_base_data.parquet
