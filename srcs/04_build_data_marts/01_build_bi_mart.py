@@ -46,12 +46,12 @@ def build_bi_mart(engine):
     CREATE TABLE {_TARGET_SCHEMA}.fact_solar_performance_hourly AS
     WITH Clean_Hourly_Gen AS (
         SELECT 
-            f.site_id, f.geo_id, f.date_id, t.hour AS hourly_bucket,
+            f.site_id, f.geo_id, f.date_id, t.hour AS hourly_bucket,f.fill_null_algorithm,
             SUM(f.energy_generated_kwh) AS total_energy
         FROM {_SOURCE_SCHEMA}.fact_solar_energy_gen f
         JOIN {_SOURCE_SCHEMA}.dim_time t ON f.time_id = t.time_id
         -- WHERE COALESCE(f.rolling_outlier_flag, false) = false
-        GROUP BY f.site_id, f.geo_id, f.date_id, t.hour
+        GROUP BY f.site_id, f.geo_id, f.date_id, t.hour, f.fill_null_algorithm
     )
     SELECT 
         gen.site_id, gen.geo_id, gen.date_id, gen.hourly_bucket, gen.total_energy,

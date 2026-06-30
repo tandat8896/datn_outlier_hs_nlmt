@@ -226,7 +226,7 @@ LOAD_SPECS: tuple[LoadSpec, ...] = (
     ),
     LoadSpec(
         table="fact_solar_energy_gen",
-        columns=("sitekey", "timestamp", "energy_generated_kwh"),
+        columns=("sitekey", "timestamp", "energy_generated_kwh", "fill_null_algorithm"), 
         select_sql=f"""
             SELECT
                 sitekey,
@@ -236,7 +236,8 @@ LOAD_SPECS: tuple[LoadSpec, ...] = (
                     WHEN solargeneration ~ '^-?[0-9]+(\\.[0-9]+)?$'
                         THEN solargeneration::numeric
                     ELSE NULL
-                END AS energy_generated_kwh
+                END AS energy_generated_kwh,
+                fill_null_algorithm -- <-- Thêm cột bốc từ staging ở đây
             FROM staging.stg_solar_energy_generation
         """,
     ),
