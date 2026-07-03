@@ -194,7 +194,7 @@ def run_qa_qc_check(engine: Engine) -> None:
         log.error(f"Lỗi khi chạy script QA/QC chi tiết: {e}")
         raise
 
-# 6. LUỒNG CHẠY CHÍNH
+# 6.LUỒNG CHẠY CHÍNH
 def main() -> None:
     try:
         engine = create_db_engine()
