@@ -39,7 +39,98 @@ def create_db_engine() -> Engine:
         log.error(f"Lỗi khởi tạo kết nối Database: {e}")
         raise
 
-# 3. HÀM THỰC THI QA/QC
+# 3. HÀM KIỂM TRA CẤU TRÚC (SCHEMA)
+def get_columns(engine: Engine, schema: str, table_name: str) -> set:
+    """Truy vấn danh sách cột của một bảng hoặc view từ pg_attribute"""
+    sql = text("""
+        SELECT a.attname AS column_name
+        FROM pg_attribute a
+        JOIN pg_class c ON a.attrelid = c.oid
+        JOIN pg_namespace n ON c.relnamespace = n.oid
+        WHERE n.nspname = :schema 
+          AND c.relname = :table_name
+          AND a.attnum > 0 
+          AND NOT a.attisdropped;
+    """)
+    with engine.connect() as conn:
+        result = conn.execute(sql, {"schema": schema, "table_name": table_name})
+        return {row.column_name for row in result.fetchall()}
+
+def run_schema_check(engine: Engine) -> None:
+    log.info("="*60)
+    log.info("BẮT ĐẦU KIỂM TRA CẤU TRÚC CỘT")
+    log.info("="*60)
+    
+    try:
+        dwh_cols = get_columns(engine, 'datawarehouse', 'fact_solar_energy_gen')
+        bi_cols = get_columns(engine, 'bi_mart', 'mv_bi_mart_hourly_measures')
+        
+        log.info(f"Số cột của bảng Datawarehouse (fact_solar_energy_gen): {len(dwh_cols)}")
+        log.info(f"Số cột của Materialized View (mv_bi_mart_hourly_measures): {len(bi_cols)}")
+        
+        dwh_only = dwh_cols - bi_cols
+        bi_only = bi_cols - dwh_cols
+        
+        if not dwh_only and not bi_only:
+            log.info("Cấu trúc tên cột của 2 bảng hoàn toàn giống nhau.")
+        else:
+            log.warning("Phát hiện sự khác biệt về cấu trúc cột!")
+            if dwh_only:
+                log.warning(f"Các cột CHỈ CÓ trong Datawarehouse: {', '.join(sorted(dwh_only))}")
+            if bi_only:
+                log.warning(f"Các cột CHỈ CÓ trong BI Mart: {', '.join(sorted(bi_only))}")
+                
+    except Exception as e:
+        log.error(f"Lỗi khi kiểm tra cấu trúc cột: {e}")
+        raise
+
+# 4. HÀM KIỂM TRA TỔNG QUAN (SỐ DÒNG & TỔNG SẢN LƯỢNG)
+def run_summary_check(engine: Engine) -> None:
+    log.info("\n" + "="*60)
+    log.info("BẮT ĐẦU KIỂM TRA TỔNG QUAN (ROW COUNT & TOTAL ENERGY)")
+    log.info("="*60)
+    
+    sql_dwh = text("""
+        SELECT COUNT(*) AS total_rows, 
+               COALESCE(SUM(energy_generated_kwh), 0) AS total_energy 
+        FROM datawarehouse.fact_solar_energy_gen
+    """)
+    
+    sql_bi = text("""
+        SELECT COUNT(*) AS total_rows, 
+               COALESCE(SUM(e_hourly), 0) AS total_energy 
+        FROM bi_mart.mv_bi_mart_hourly_measures
+    """)
+    
+    try:
+        with engine.connect() as conn:
+            dwh_res = conn.execute(sql_dwh).fetchone()
+            bi_res = conn.execute(sql_bi).fetchone()
+            
+            dwh_rows, dwh_energy = dwh_res.total_rows, float(dwh_res.total_energy)
+            bi_rows, bi_energy = bi_res.total_rows, float(bi_res.total_energy)
+            
+            # Kiểm tra số dòng
+            log.info(f"[ROW COUNT] Datawarehouse: {dwh_rows:,} dòng | BI Mart: {bi_rows:,} dòng")
+            if dwh_rows != bi_rows:
+                log.info("-> (Lưu ý: Số dòng khác biệt do BI Mart đã được gom nhóm theo giờ từ dữ liệu 15 phút).")
+            else:
+                log.info("-> Số dòng bằng nhau.")
+                
+            # Kiểm tra tổng sản lượng điện
+            log.info(f"[TOTAL ENERGY] Datawarehouse: {dwh_energy:,.4f} kWh | BI Mart: {bi_energy:,.4f} kWh")
+            energy_diff = abs(dwh_energy - bi_energy)
+            
+            if energy_diff <= 0.001:
+                log.info("-> TỔNG SẢN LƯỢNG ĐIỆN KHỚP NHAU HOÀN TOÀN.")
+            else:
+                log.warning(f"-> PHÁT HIỆN LỆCH TỔNG SẢN LƯỢNG TOÀN HỆ THỐNG: {energy_diff:,.4f} kWh")
+                
+    except Exception as e:
+        log.error(f"Lỗi khi kiểm tra tổng quan: {e}")
+        raise
+
+# 5. HÀM THỰC THI QA/QC DỮ LIỆU CHI TIẾT
 def run_qa_qc_check(engine: Engine) -> None:
     qa_qc_sql = text("""
         WITH dwh_15m AS (
@@ -55,8 +146,7 @@ def run_qa_qc_check(engine: Engine) -> None:
                 date_id,
                 site_id,
                 ROUND(SUM(e_hourly)::numeric, 4) AS bi_total_energy
-            -- ĐÃ SỬA LẠI TÊN VIEW Ở DÒNG DƯỚI ĐÂY CHO KHỚP VỚI DATABASE
-            FROM bi_mart.vw_bi_mart_hourly_measures_replace
+            FROM bi_mart.mv_bi_mart_hourly_measures
             GROUP BY date_id, site_id
         )
         SELECT 
@@ -77,15 +167,15 @@ def run_qa_qc_check(engine: Engine) -> None:
             result = conn.execute(qa_qc_sql)
             rows = result.fetchall()
             
-            log.info("="*60)
-            log.info("BẮT ĐẦU KIỂM TRA ĐỐI CHIẾU DỮ LIỆU")
+            log.info("\n" + "="*60)
+            log.info("BẮT ĐẦU KIỂM TRA ĐỐI CHIẾU DỮ LIỆU CHI TIẾT")
             log.info("="*60)
             
             if not rows:
-                log.info("Không phát hiện chênh lệch.")
+                log.info("Không phát hiện chênh lệch dữ liệu chi tiết theo trạm/ngày (Variance <= 0.001).")
             else:
-                log.warning(f"PHÁT HIỆN LỆCH DỮ LIỆU TẠI {len(rows)} DÒNG!")
-                log.warning("Dưới đây là (tối đa) 15 dòng lỗi tiêu biểu:")
+                log.warning(f"PHÁT HIỆN LỆCH DỮ LIỆU CHI TIẾT TẠI {len(rows)} DÒNG (TRẠM/NGÀY)!")
+                log.warning("Dưới đây là 15 dòng lỗi tiêu biểu:")
                 
                 header = f"{'Date ID':<12} | {'Site ID':<10} | {'DWH Total':<15} | {'BI Mart Total':<15} | {'Variance':<10}"
                 separator = "-" * 80
@@ -101,21 +191,30 @@ def run_qa_qc_check(engine: Engine) -> None:
                     log.warning(f"... (Còn {len(rows) - 15} dòng lỗi khác bị ẩn để tránh trôi log)")
                 
     except SQLAlchemyError as e:
-        log.error(f"Lỗi khi chạy script QA/QC: {e}")
+        log.error(f"Lỗi khi chạy script QA/QC chi tiết: {e}")
         raise
 
-# 4. LUỒNG CHẠY CHÍNH
+# 6. LUỒNG CHẠY CHÍNH
 def main() -> None:
     try:
         engine = create_db_engine()
-        log.info("Khởi tạo kết nối Database thành công.")
+        log.info("Khởi tạo kết nối Database thành công.\n")
+        
+        # Bước 1: Kiểm tra cấu trúc cột
+        run_schema_check(engine)
+        
+        # Bước 2: Kiểm tra tổng quan (Số dòng & Tổng lượng điện)
+        run_summary_check(engine)
+        
+        # Bước 3: Đối chiếu giá trị dữ liệu chi tiết
         run_qa_qc_check(engine)
+        
     except Exception as e:
         log.critical(f"Tiến trình bị gián đoạn: {e}")
     finally:
         if 'engine' in locals():
             engine.dispose()
-            log.info("Đã đóng kết nối Database an toàn.")
+            log.info("\nĐã đóng kết nối Database an toàn.")
 
 if __name__ == "__main__":
     main()
