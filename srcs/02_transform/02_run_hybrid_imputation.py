@@ -1,434 +1,106 @@
-"""Fill missing solar generation values using the original hybrid strategy."""
-
-from __future__ import annotations
-
-from io import StringIO
 import logging
 from pathlib import Path
-import warnings
-
-import numpy as np
-import pandas as pd
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
 from sqlalchemy import text
 import yaml
 
+log = logging.getLogger("pipeline.bi_mart")
 
-warnings.filterwarnings("ignore")
-log = logging.getLogger("pipeline.hybrid_imputation")
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_BI_PARAMS_CONFIG = _REPO_ROOT / "config" / "04_machine_learning" / "01_bi_mart_params.yaml"
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-CONFIG_FILE = (
-    PROJECT_ROOT / "config" / "02_transform" / "03_hybrid_imputation.yaml"
-)
+with _BI_PARAMS_CONFIG.open(encoding="utf-8") as _f:
+    _bi_cfg = yaml.safe_load(_f)
 
-with CONFIG_FILE.open(encoding="utf-8") as _file:
-    _config = yaml.safe_load(_file)
+# Business params từ config
+_FIT_RATE = _bi_cfg["financial"]["fit_rate_vnd_per_kwh"]
+_CO2_FACTOR = _bi_cfg["environmental"]["co2_emission_factor_kg_per_kwh"]
+_TREES_FACTOR = _bi_cfg["environmental"]["co2_per_tree_kg"]
+_NOMINAL_PR = _bi_cfg["performance"]["nominal_pr"]
+_TEMP_COEFF = _bi_cfg["performance"]["temp_coefficient_per_deg"]
+_NOCT_FACTOR = _bi_cfg["performance"]["noct_radiation_factor"]
+_MIN_RADIATION = _bi_cfg["performance"]["min_radiation_threshold_wm2"]
+_SOURCE_SCHEMA = _bi_cfg["database"]["source_schema"]
+_TARGET_SCHEMA = _bi_cfg["database"]["target_schema"]
 
-SCHEMA = _config["database"]["schema"]
-SOLAR_TABLE = _config["database"]["solar_table"]
-WEATHER_TABLE = _config["database"]["weather_table"]
+def build_bi_mart(engine):
+    sql_script = f"""
+    CREATE SCHEMA IF NOT EXISTS {_TARGET_SCHEMA};
 
-GAP_LINEAR_MAX = int(_config["imputation"]["gap_linear_max_rows"])
-GAP_CUBIC_MAX = int(_config["imputation"]["gap_cubic_max_rows"])
-NIGHT_START = float(_config["imputation"]["night_start_hour"])
-NIGHT_END = float(_config["imputation"]["night_end_hour"])
-NIGHT_TOLERANCE = pd.Timedelta(
-    _config["imputation"]["night_weather_tolerance"]
-)
-REGRESSION_TOLERANCE = pd.Timedelta(
-    _config["imputation"]["regression_weather_tolerance"]
-)
-REGRESSION_MIN_TRAINING_ROWS = int(
-    _config["imputation"]["regression_min_training_rows"]
-)
-REGRESSION_FEATURES = list(_config["imputation"]["regression_features"])
+    DROP VIEW IF EXISTS {_TARGET_SCHEMA}.dim_solar_site CASCADE;
+    DROP VIEW IF EXISTS {_TARGET_SCHEMA}.dim_geography CASCADE;
+    DROP VIEW IF EXISTS {_TARGET_SCHEMA}.dim_date CASCADE;
+    DROP VIEW IF EXISTS {_TARGET_SCHEMA}.dim_weather_type CASCADE;
 
-OUTPUT_DIR = PROJECT_ROOT / _config["output"]["directory"]
-EXPORT_INTERMEDIATE = bool(_config["output"]["export_intermediate_csv"])
-FINAL_CSV = OUTPUT_DIR / _config["output"]["final_csv"]
-COPY_CHUNK_SIZE = int(_config["runtime"]["database_copy_chunk_size"])
+    DROP TABLE IF EXISTS {_TARGET_SCHEMA}.fact_solar_performance_hourly CASCADE;
 
+    CREATE OR REPLACE VIEW {_TARGET_SCHEMA}.dim_solar_site AS SELECT * FROM {_SOURCE_SCHEMA}.dim_solar_site;
+    CREATE OR REPLACE VIEW {_TARGET_SCHEMA}.dim_geography AS SELECT * FROM {_SOURCE_SCHEMA}.dim_geography;
+    CREATE OR REPLACE VIEW {_TARGET_SCHEMA}.dim_date AS SELECT * FROM {_SOURCE_SCHEMA}.dim_date;
+    CREATE OR REPLACE VIEW {_TARGET_SCHEMA}.dim_weather_type AS SELECT * FROM {_SOURCE_SCHEMA}.dim_weather_type;
 
-def export_csv(df: pd.DataFrame, filename: str) -> None:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = OUTPUT_DIR / filename
-    df.to_csv(path, index=False)
-    log.info("Đã xuất %s (%s dòng)", path, f"{len(df):,}")
-
-
-def get_null_gaps(series: pd.Series) -> list[tuple[int, int, int]]:
-    """Return (start, end, size) for every consecutive null gap."""
-    gaps: list[tuple[int, int, int]] = []
-    in_gap = False
-    start = 0
-    for index, value in enumerate(series):
-        if pd.isna(value):
-            if not in_gap:
-                start = index
-                in_gap = True
-        elif in_gap:
-            gaps.append((start, index - 1, index - start))
-            in_gap = False
-    if in_gap:
-        gaps.append((start, len(series) - 1, len(series) - start))
-    return gaps
-
-
-def rule_based_night_zero(
-    solar_df: pd.DataFrame,
-    weather_df: pd.DataFrame,
-    site_key: int,
-) -> tuple[pd.Series, int]:
-    """Set missing generation to zero at night or when radiation is zero."""
-    generation = solar_df["energy_generated_kwh"].copy()
-    timestamp = solar_df["timestamp"]
-
-    decimal_hour = timestamp.dt.hour + timestamp.dt.minute / 60
-    is_night = (decimal_hour >= NIGHT_START) | (decimal_hour < NIGHT_END)
-
-    weather = weather_df[weather_df["sitekey"] == site_key][
-        ["timestamp", "shortwave_radiation", "is_day"]
-    ].copy()
-    weather["timestamp"] = pd.to_datetime(weather["timestamp"])
-
-    merged = pd.merge_asof(
-        solar_df[["timestamp"]].reset_index(),
-        weather.sort_values("timestamp"),
-        on="timestamp",
-        tolerance=NIGHT_TOLERANCE,
-        direction="nearest",
-    ).set_index("index")
-
-    zero_radiation = (
-        (merged["shortwave_radiation"].fillna(0) == 0)
-        | (merged["is_day"].fillna(0) == 0)
+    CREATE TABLE {_TARGET_SCHEMA}.fact_solar_performance_hourly AS
+    WITH Clean_Hourly_Gen AS (
+        SELECT 
+            f.site_id, f.geo_id, f.date_id, t.hour AS hourly_bucket, f.fill_null_algorithm,
+            SUM(f.energy_generated_kwh) AS total_energy
+        FROM {_SOURCE_SCHEMA}.fact_solar_energy_gen f
+        JOIN {_SOURCE_SCHEMA}.dim_time t ON f.time_id = t.time_id
+        -- WHERE COALESCE(f.rolling_outlier_flag, false) = false
+        GROUP BY f.site_id, f.geo_id, f.date_id, t.hour, f.fill_null_algorithm
     )
-    zero_mask = is_night.values | zero_radiation.values
-    fill_mask = zero_mask & generation.isna()
-    filled = int(fill_mask.sum())
-    generation[fill_mask] = 0.0
-    return generation, filled
+    SELECT 
+        gen.site_id, gen.geo_id, gen.date_id, gen.hourly_bucket, 
+        gen.fill_null_algorithm, 
+        gen.total_energy,
+        w.weather_type_id,
+        w.shortwave_radiation, w.temperature_c, w.cloud_cover_total, w.precipitation_mm
+    FROM Clean_Hourly_Gen gen
+    LEFT JOIN (
+        SELECT * FROM (
+            SELECT fw.*, dw.hour as weather_hour,
+            ROW_NUMBER() OVER(PARTITION BY fw.geo_id, fw.date_id, dw.hour ORDER BY fw.weather_id) as rn
+            FROM {_SOURCE_SCHEMA}.fact_weather fw
+            JOIN {_SOURCE_SCHEMA}.dim_time dw ON fw.time_id = dw.time_id
+        ) sub WHERE rn = 1
+    ) w 
+    ON gen.geo_id = w.geo_id AND gen.date_id = w.date_id AND gen.hourly_bucket = w.weather_hour;
 
+    ALTER TABLE {_TARGET_SCHEMA}.fact_solar_performance_hourly ADD CONSTRAINT fk_bi_fact_site FOREIGN KEY (site_id) REFERENCES {_SOURCE_SCHEMA}.dim_solar_site(site_id);
+    ALTER TABLE {_TARGET_SCHEMA}.fact_solar_performance_hourly ADD CONSTRAINT fk_bi_fact_geo FOREIGN KEY (geo_id) REFERENCES {_SOURCE_SCHEMA}.dim_geography(geo_id);
+    ALTER TABLE {_TARGET_SCHEMA}.fact_solar_performance_hourly ADD CONSTRAINT fk_bi_fact_date FOREIGN KEY (date_id) REFERENCES {_SOURCE_SCHEMA}.dim_date(date_id);
+    ALTER TABLE {_TARGET_SCHEMA}.fact_solar_performance_hourly ADD CONSTRAINT fk_bi_fact_weather FOREIGN KEY (weather_type_id) REFERENCES {_SOURCE_SCHEMA}.dim_weather_type(weather_type_id);
 
-def regression_imputation_large_gaps_strict(
-    solar_sub: pd.DataFrame,
-    weather_df: pd.DataFrame,
-    site_key: int,
-    large_gap_indices: set[int],
-) -> tuple[np.ndarray, int]:
-    """Apply the original per-site regression only to original large gaps."""
-    weather = weather_df[weather_df["sitekey"] == site_key][
-        ["timestamp", *REGRESSION_FEATURES]
-    ].copy()
-    weather["timestamp"] = pd.to_datetime(weather["timestamp"])
-
-    merged = pd.merge_asof(
-        solar_sub[["timestamp", "energy_generated_kwh"]].reset_index(),
-        weather.sort_values("timestamp"),
-        on="timestamp",
-        tolerance=REGRESSION_TOLERANCE,
-        direction="nearest",
-    ).set_index("index")
-
-    train_mask = (
-        merged["energy_generated_kwh"].notna()
-        & merged[REGRESSION_FEATURES].notna().all(axis=1)
-    )
-    prediction_mask = (
-        merged["energy_generated_kwh"].isna()
-        & merged[REGRESSION_FEATURES].notna().all(axis=1)
-    )
-
-    if train_mask.sum() < REGRESSION_MIN_TRAINING_ROWS:
-        return solar_sub["energy_generated_kwh"].values, 0
-
-    scaler = StandardScaler()
-    x_train = scaler.fit_transform(
-        merged.loc[train_mask, REGRESSION_FEATURES].values
-    )
-    model = LinearRegression()
-    model.fit(x_train, merged.loc[train_mask, "energy_generated_kwh"].values)
-
-    result = solar_sub["energy_generated_kwh"].copy()
-    filled = 0
-    if prediction_mask.any():
-        predictions = model.predict(
-            scaler.transform(
-                merged.loc[prediction_mask, REGRESSION_FEATURES].values
-            )
-        )
-        for prediction, index in zip(
-            predictions,
-            merged[prediction_mask].index.tolist(),
-        ):
-            local_position = (
-                solar_sub.index.get_loc(index)
-                if index in solar_sub.index
-                else None
-            )
-            if (
-                local_position is not None
-                and local_position in large_gap_indices
-            ):
-                result.iloc[local_position] = max(0.0, prediction)
-                filled += 1
-    return result.values, filled
-
-
-def build_imputed_solar(
-    solar_df: pd.DataFrame,
-    weather_df: pd.DataFrame,
-) -> tuple[pd.DataFrame, dict[str, int], dict[str, pd.DataFrame]]:
-    """Run the original hybrid imputation algorithm without database writes."""
-    solar_df = solar_df.copy()
-    weather_df = weather_df.copy()
-    solar_df["timestamp"] = pd.to_datetime(
-        solar_df["timestamp"], errors="coerce"
-    )
-    weather_df["timestamp"] = pd.to_datetime(
-        weather_df["timestamp"], errors="coerce"
-    )
-    solar_df = (
-        solar_df.dropna(subset=["timestamp"])
-        .sort_values("timestamp")
-        .reset_index(drop=True)
-    )
-    weather_df = (
-        weather_df.dropna(subset=["timestamp"])
-        .sort_values("timestamp")
-        .reset_index(drop=True)
-    )
-
-    total_null = int(solar_df["energy_generated_kwh"].isna().sum())
-    results: list[pd.DataFrame] = []
-    stage_results: dict[str, list[pd.DataFrame]] = (
-        {
-            "rule": [],
-            "linear": [],
-            "cubic": [],
-            "regression": [],
-        }
-        if EXPORT_INTERMEDIATE
-        else {}
-    )
-    counters = {"night": 0, "linear": 0, "cubic": 0, "regression": 0}
-
-    log.info(
-        "Hybrid Imputation input | rows=%s | null=%s",
-        f"{len(solar_df):,}",
-        f"{total_null:,}",
-    )
-
-    for site in sorted(solar_df["sitekey"].unique()):
-        subset = (
-            solar_df[solar_df["sitekey"] == site]
-            .copy()
-            .reset_index(drop=True)
-        )
-        if subset["energy_generated_kwh"].isna().sum() == 0:
-            results.append(subset)
-            continue
-
-        generation, night_filled = rule_based_night_zero(
-            subset, weather_df, site
-        )
-        subset["energy_generated_kwh"] = generation
-        counters["night"] += night_filled
-        if EXPORT_INTERMEDIATE:
-            stage_results["rule"].append(subset.copy())
-
-        time_series = pd.Series(
-            subset["energy_generated_kwh"].values,
-            index=pd.DatetimeIndex(subset["timestamp"]),
-            dtype=float,
-        )
-        linear_indices: list[int] = []
-        cubic_indices: list[int] = []
-        large_gap_indices: set[int] = set()
-        for start, end, size in get_null_gaps(time_series.values):
-            indices = list(range(start, end + 1))
-            if size <= GAP_LINEAR_MAX:
-                linear_indices.extend(indices)
-            elif size <= GAP_CUBIC_MAX:
-                cubic_indices.extend(indices)
-            else:
-                large_gap_indices.update(indices)
-
-        before_linear = int(time_series.isna().sum())
-        if linear_indices:
-            interpolated = time_series.interpolate(method="time")
-            for index in linear_indices:
-                time_series.iloc[index] = interpolated.iloc[index]
-        counters["linear"] += before_linear - int(time_series.isna().sum())
-        if EXPORT_INTERMEDIATE:
-            linear_result = subset.copy()
-            linear_result["energy_generated_kwh"] = time_series.values
-            stage_results["linear"].append(linear_result)
-
-        before_cubic = int(time_series.isna().sum())
-        if cubic_indices:
-            temporary = time_series.interpolate(method="linear")
-            interpolated = temporary.interpolate(method="cubic")
-            for index in cubic_indices:
-                time_series.iloc[index] = interpolated.iloc[index]
-        counters["cubic"] += before_cubic - int(time_series.isna().sum())
-        if EXPORT_INTERMEDIATE:
-            cubic_result = subset.copy()
-            cubic_result["energy_generated_kwh"] = time_series.values
-            stage_results["cubic"].append(cubic_result)
-
-        subset["energy_generated_kwh"] = time_series.values
-        values, regression_filled = regression_imputation_large_gaps_strict(
-            subset,
-            weather_df,
-            site,
-            large_gap_indices,
-        )
-        subset["energy_generated_kwh"] = values
-        counters["regression"] += regression_filled
-        if EXPORT_INTERMEDIATE:
-            stage_results["regression"].append(subset.copy())
-
-        subset["energy_generated_kwh"] = subset[
-            "energy_generated_kwh"
-        ].clip(lower=0)
-        results.append(subset)
-        log.info(
-            "Site %s | night=%s | linear=%s | cubic=%s | regression=%s "
-            "| remaining_null=%s",
-            site,
-            f"{night_filled:,}",
-            f"{len(linear_indices):,}",
-            f"{len(cubic_indices):,}",
-            f"{regression_filled:,}",
-            f"{subset['energy_generated_kwh'].isna().sum():,}",
-        )
-
-    cleaned = pd.concat(results, ignore_index=True)
-    remaining_null = int(cleaned["energy_generated_kwh"].isna().sum())
-    counters["input_null"] = total_null
-    counters["remaining_null"] = remaining_null
-    counters["filled_total"] = total_null - remaining_null
-
-    materialized_stages = {
-        name: pd.concat(frames, ignore_index=True)
-        for name, frames in stage_results.items()
-        if frames
-    }
-    return cleaned, counters, materialized_stages
-
-
-def _copy_updates_to_temp_table(connection, cleaned: pd.DataFrame) -> None:
-    """COPY cleaned values to a transaction-local table, then update by key."""
-    raw_connection = connection.connection
-    cursor = raw_connection.cursor()
-    try:
-        cursor.execute(
-            """
-            CREATE TEMP TABLE temp_solar_energy_imputed (
-                sitekey text NOT NULL,
-                timestamp timestamp without time zone NOT NULL,
-                energy_generated_kwh double precision
-            ) ON COMMIT DROP
-            """
-        )
-        for start in range(0, len(cleaned), COPY_CHUNK_SIZE):
-            chunk = cleaned.iloc[start : start + COPY_CHUNK_SIZE][
-                ["sitekey", "timestamp", "energy_generated_kwh"]
-            ]
-            buffer = StringIO()
-            chunk.to_csv(
-                buffer,
-                index=False,
-                header=False,
-                na_rep="\\N",
-                date_format="%Y-%m-%d %H:%M:%S",
-            )
-            buffer.seek(0)
-            cursor.copy_expert(
-                """
-                COPY temp_solar_energy_imputed
-                    (sitekey, timestamp, energy_generated_kwh)
-                FROM STDIN WITH (FORMAT CSV, NULL '\\N')
-                """,
-                buffer,
-            )
-            log.info(
-                "Prepared update rows %s/%s",
-                f"{min(start + COPY_CHUNK_SIZE, len(cleaned)):,}",
-                f"{len(cleaned):,}",
-            )
-
-        cursor.execute(
-            f"""
-            UPDATE {SCHEMA}.{SOLAR_TABLE} target
-            SET energy_generated_kwh = source.energy_generated_kwh
-            FROM temp_solar_energy_imputed source
-            WHERE target.sitekey = source.sitekey
-              AND target.timestamp = source.timestamp
-            """
-        )
-        if cursor.rowcount != len(cleaned):
-            raise RuntimeError(
-                "Hybrid imputation update row mismatch: "
-                f"expected={len(cleaned):,}, updated={cursor.rowcount:,}"
-            )
-    finally:
-        cursor.close()
-
-
-def run_hybrid_imputation(engine, *, execute: bool = True) -> dict[str, int]:
-    """Read buffers, apply the original algorithm, and update energy safely."""
-    log.info(">> Đang kéo 2.7 triệu dòng Solar từ Cloud về máy... (sẽ mất khoảng 1-3 phút tùy mạng)")
-    solar = pd.read_sql_query(
-        text(f"SELECT * FROM {SCHEMA}.{SOLAR_TABLE}"),
-        con=engine,
-    )
-    log.info(">> Đã tải xong Solar data. Đang kéo tiếp 2.7 triệu dòng Weather từ Cloud...")
-    weather = pd.read_sql_query(
-        text(f"SELECT * FROM {SCHEMA}.{WEATHER_TABLE}"),
-        con=engine,
-    )
-    log.info(">> Đã kéo xong toàn bộ data! Đang chạy mô hình AI nội suy (Imputation)...")
-    cleaned, counters, stages = build_imputed_solar(solar, weather)
-
-    if EXPORT_INTERMEDIATE:
-        export_csv(stages["rule"], "result_01_rule_based_night.csv")
-        export_csv(stages["linear"], "result_02_linear_interpolation.csv")
-        export_csv(stages["cubic"], "result_03_cubic_spline.csv")
-        export_csv(stages["regression"], "result_04_regression.csv")
-        export_csv(cleaned, FINAL_CSV.name)
-
-    log.info("─" * 65)
-    log.info("  [TỔNG KẾT QUÁ TRÌNH NỘI SUY (IMPUTATION)]")
-    log.info(f"  NULL ban đầu       : {counters['input_null']:,}")
-    log.info(f"  - Rule-based (đêm) : điền {counters.get('night', 0):,}")
-    log.info(f"  - Linear (≤ 2h)    : điền {counters.get('linear', 0):,}")
-    log.info(f"  - Cubic (3-8h)     : điền {counters.get('cubic', 0):,}")
-    log.info(f"  - Regression (> 8h): điền {counters.get('regression', 0):,}")
-    log.info(f"  => TỔNG ĐÃ ĐIỀN    : {counters['filled_total']:,}")
-    log.info(f"  NULL còn lại       : {counters['remaining_null']:,}")
-    log.info("─" * 65)
-
-    if not execute:
-        log.info("Dry-run: database was not modified")
-        return counters
-
-    with engine.begin() as connection:
-        _copy_updates_to_temp_table(connection, cleaned)
-        database_null = connection.execute(
+    CREATE INDEX idx_fact_fk_site_date ON {_TARGET_SCHEMA}.fact_solar_performance_hourly (site_id, date_id);
+    CREATE INDEX idx_fact_fk_geo_date ON {_TARGET_SCHEMA}.fact_solar_performance_hourly (geo_id, date_id);
+    """
+    log.info(">> Bắt đầu build BI Mart...")
+    log.info(f"Đang đắp dữ liệu vào host: {engine.url.host}, database: {engine.url.database}")
+    with engine.begin() as conn:
+        statements = [s.strip() for s in sql_script.split(';') if s.strip()]
+        log.info("BI Mart có %s SQL statements cần thực thi", len(statements))
+        for index, statement in enumerate(statements, start=1):
+            operation = " ".join(statement.split()[:5])
+            log.info("[%s/%s] SQL | %s", index, len(statements), operation)
+            conn.execute(text(statement))
+        fact_rows = conn.execute(
             text(
-                f"SELECT COUNT(*) FROM {SCHEMA}.{SOLAR_TABLE} "
-                "WHERE energy_generated_kwh IS NULL"
+                f"SELECT COUNT(*) "
+                f"FROM {_TARGET_SCHEMA}.fact_solar_performance_hourly"
             )
         ).scalar_one()
-        if int(database_null) != counters["remaining_null"]:
-            raise RuntimeError(
-                "Hybrid imputation null validation failed: "
-                f"expected={counters['remaining_null']:,}, "
-                f"database={int(database_null):,}"
-            )
-    log.info("Hybrid Imputation committed successfully")
-    return counters
+        log.info(
+            "BI Mart audit | fact_solar_performance_hourly rows=%s",
+            f"{fact_rows:,}",
+        )
+    log.info(">> BI Mart hoàn tất!\n")
+
+
+if __name__ == "__main__":
+    log.info("==== KHỞI ĐỘNG PIPELINE (BI) ====\n")
+    try:
+        from utils.db_connection import get_engine # Lưu ý import hàm get_engine nếu chưa có
+        db_engine = get_engine()
+        build_bi_mart(db_engine)
+        log.info("==== PIPELINE THÀNH CÔNG ====")
+    except Exception as error:
+        log.error(f"PIPELINE THẤT BẠI: {error}")

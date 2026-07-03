@@ -143,7 +143,7 @@ def load_fact_solar_energy_gen(cur):
         print(f"    - Batch {idx}/{len(months)}: {m_start.strftime('%Y-%m')}")
         sql_batch = f"""
         INSERT INTO {TARGET_SCHEMA}.fact_solar_energy_gen (
-            gen_id, site_id, geo_id, date_id, time_id, energy_generated_kwh, rolling_outlier_flag
+            gen_id, site_id, geo_id, date_id, time_id, energy_generated_kwh, rolling_outlier_flag, fill_null_algorithm
         )
         SELECT
             (SELECT COALESCE(SUM(c), 0) FROM (
@@ -155,7 +155,8 @@ def load_fact_solar_energy_gen(cur):
             dd.date_id,
             dt.time_id,
             s.energy_generated_kwh,
-            COALESCE(s.rolling_outlier_flag, false) AS rolling_outlier_flag
+            COALESCE(s.rolling_outlier_flag, false) AS rolling_outlier_flag,
+            s.fill_null_algorithm -- Đã thêm cột này để bốc từ source sang target
         FROM {SOURCE_SCHEMA}.fact_solar_energy_gen s
         JOIN {TARGET_SCHEMA}.dim_date dd ON dd.full_date = s.timestamp::date
         JOIN {TARGET_SCHEMA}.dim_time dt ON dt.time_string = to_char(s.timestamp, 'HH24:MI')
