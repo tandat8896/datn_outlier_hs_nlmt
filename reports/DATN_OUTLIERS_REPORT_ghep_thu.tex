@@ -19,7 +19,10 @@
 \emergencystretch=3em
 
 \usepackage{geometry}
-\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=2cm}
+% footskip mac dinh 30pt, ma tai lieu dung gian dong 1,5 nen moi dong cao ~21,75pt:
+% chan trang chi cach chan chu khoang 8pt, trang nao day chu la cham vao dong 'Du an
+% Tot nghiep'. Ha chan trang xuong 1,5cm de co khoang ho, le trai/phai/tren giu nguyen.
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=2cm, footskip=1.5cm}
 % ======================== CẤU HÌNH CODE PYTHON (MUTED STYLE) ==============================
 \usepackage{listings}
 \usepackage{xcolor} % Bắt buộc phải có để dùng \definecolor
@@ -94,6 +97,31 @@
 \usepackage{float}
 \usepackage{caption}
 \usepackage{subcaption}
+% placeins cho \FloatBarrier: chan khong cho hinh/bang cua mot muc troi sang muc sau.
+% Khong dung tuy chon [section] vi no ap cho CA tai lieu; o day chi dat rao thu cong
+% truoc tung \section cua chuong Hoc may, khong dung toi bo cuc cac chuong khac.
+\usepackage{placeins}
+% \needspace{n\baselineskip}: neu cuoi trang con it hon n dong thi sang trang moi, con du
+% cho thi khong lam gi. Dung de mot doan ngan va khoi ket xuat di theo no khong bi cat doi
+% qua hai trang. Khac \filbreak o cho \filbreak luon uu tien ngat, con \needspace chi ngat
+% khi that su thieu cho - nho vay khong de lai trang trong. Dinh nghia lay dung tu goi
+% needspace (goi nay khong co san trong ban TeX o may nay, chi phat hanh dang .dtx).
+\makeatletter
+\newcommand{\needspace}[1]{%
+  \begingroup
+    \setlength{\dimen@}{#1}%
+    \vskip\z@\@plus\dimen@
+    \penalty -100\vskip\z@\@plus -\dimen@
+    \vskip\dimen@
+    \penalty 9999\vskip -\dimen@
+    \vskip\z@skip
+  \endgroup}
+\makeatother
+% Chu thich hinh/bang KHONG can deu hai ben. Chu thich hay chua ten tep dai khong ngat
+% dong duoc; ep can deu thi TeX phai gian khoang trang cua dong tren ra toi da, thanh ra
+% 'chu nam xa nhau'. Bo can deu o rieng chu thich la het hien tuong do, than bai van
+% can deu binh thuong. Chu thich mot dong van can giua nhu cu.
+\captionsetup{justification=raggedright}
 
 % Màu sắc & Code
 \usepackage{xcolor}
@@ -194,8 +222,38 @@
 \usepackage{microtype}
 \usepackage{url}
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
-% \tep: in ten cot/ten tep co dau gach duoi ma khong vo
-\DeclareRobustCommand{\tep}[1]{\texttt{\detokenize{#1}}}
+% \tep: in ten cot/ten tep co dau gach duoi ma khong vo.
+% Cho phep NGAT DONG sau '/' va '_' de mot duong dan dai khong bi day nguyen cuc xuong
+% dong duoi, vi chinh viec do lam TeX phai gian khoang trang dong tren ra toi da (dong
+% 'chu nam xa nhau'). Chu khong doi mot ky tu, chi them cho duoc phep xuong dong; khong
+% chen dau gach noi nen doc lai van ra dung ten tep.
+% \tep in ten cot/ten tep, giu nguyen dau gach duoi, va CHO PHEP xuong dong sau '/' va '_'.
+% Cach lam: \detokenize bien chuoi thanh cac ky tu thuong, roi duyet tung ky tu, gap '/'
+% hoac '_' thi chen mot diem ngat rong (\discretionary rong ca ba phan) - tuc chi cho phep
+% xuong dong chu KHONG them ky tu nao, doc lai van ra dung ten tep.
+%
+% Vi sao khong dung \DeclareUrlCommand cua goi url: lenh do doi catcode, dung trong tai lieu
+% nay lam vo toan bo cong thuc toan (da thu, 749 loi). Vong lap duoi day khong dong toi
+% catcode nen an toan.
+%
+% Luu y: vong lap doc doi so khong bao gom dau cach, nen \tep{...} KHONG duoc chua dau cach.
+% Ba cho tung co dau cach da duoc tach thanh \tep{a}${}={}$\tep{b}.
+\makeatletter
+\DeclareRobustCommand{\tep}[1]{\texttt{\expandafter\tep@duyet\detokenize{#1}\tep@het}}
+\def\tep@het{\tep@het}
+\def\tep@duyet#1{%
+  \ifx#1\tep@het
+  \else
+    #1\tep@ngat{#1}\expandafter\tep@duyet
+  \fi}
+% Dinh nghia voi '_' o catcode 12 cho khop voi ky tu ma \detokenize sinh ra.
+{\catcode`\_=12 \gdef\tep@ngat#1{\if#1/\discretionary{}{}{}\else\if#1_\discretionary{}{}{}\fi\fi}}
+\makeatother
+% Ten cot va duong dan trong \tep khong ngat dong duoc, nen khi mot cai roi vao cuoi
+% dong TeX phai gian khoang trang cua ca dong ra cho day - do dung la cho anh Dat thay
+% 'may chu nam xa nhau' o trang 77. emergencystretch cho TeX them mot lan thu voi bien
+% do gian rong hon, nho vay no chon duoc cach ngat it xau hon thay vi gian toi da.
+\emergencystretch=3em
 \graphicspath{{images/}}
 
 \begin{document}
@@ -523,6 +581,26 @@ Theo tinh thần phân tích chuyên sâu (Đừng chỉ mô tả $\rightarrow$ 
 \addcontentsline{toc}{chapter}{Phụ lục B: Cấu trúc Mã nguồn}
 \label{app:code}
 \textit{[Sơ đồ cấu trúc thư mục của package Python du\_an\_tot\_nghiep và các script tiện ích.]}
+
+
+% ====================================================================
+%  PHỤ LỤC C: SO DO VONG DOI HOC MAY - BAN NHAN GOC TIENG ANH
+% ====================================================================
+\chapter*{Phụ lục C: Vòng đời học máy --- bản nhãn gốc}
+\addcontentsline{toc}{chapter}{Phụ lục C: Vòng đời học máy --- bản nhãn gốc}
+\label{app:ml_lifecycle_en}
+
+Hình~\ref{fig:ml_lifecycle} ở Mục~$7.1.4$ dùng bản đã chuyển nhãn sang tiếng Việt. Phụ lục
+này đặt bản giữ nguyên nhãn tiếng Anh của tài liệu gốc, để đối chiếu khi cần tra lại thuật
+ngữ.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.68\textwidth]{sodo_ml_lifecycle_en.pdf}
+    \caption[Vòng đời học máy, bản nhãn gốc tiếng Anh]{Vòng đời học máy, giữ nguyên nhãn
+    tiếng Anh của tài liệu gốc. Nguồn: \textit{Data Version Control}~\cite{aivietnam2025dvc}.}
+    \label{fig:ml_lifecycle_en}
+\end{figure}
 
 
 % ====================================================================
